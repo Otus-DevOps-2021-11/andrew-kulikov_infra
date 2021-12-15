@@ -10,7 +10,7 @@ class NumbersTest(unittest.TestCase):
         self.assertEqual(7 // 2, 3)
 
     def test_equal(self):
-        self.assertEqual(1 + 1, 1)
+        self.assertEqual(1 + 1, 2)
 
 
 if __name__ == '__main__':
