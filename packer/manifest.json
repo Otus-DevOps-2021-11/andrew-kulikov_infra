@@ -1,0 +1,22 @@
+{
+  "builds": [
+    {
+      "name": "yandex",
+      "builder_type": "yandex",
+      "build_time": 1640792388,
+      "files": [
+        {
+          "name": ".",
+          "size": 0
+        }
+      ],
+      "artifact_id": "fd8pt8q5ri1ltp0mefl6",
+      "packer_run_uuid": "670a280f-6939-3d30-cbb4-a9326ffd2d00",
+      "custom_data": {
+        "image_id": "fd8pt8q5ri1ltp0mefl6",
+        "image_name": "reddit-base-1640792142"
+      }
+    }
+  ],
+  "last_run_uuid": "670a280f-6939-3d30-cbb4-a9326ffd2d00"
+}
