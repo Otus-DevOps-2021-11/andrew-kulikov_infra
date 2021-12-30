@@ -1,0 +1,51 @@
+{
+  "builders": [
+    {
+      "type": "yandex",
+      "service_account_key_file": "{{ user `service_account_key_file` }}",
+      "folder_id": "{{ user `folder_id` }}",
+      "source_image_id": "{{ user `source_image_id` }}",
+      "image_name": "reddit-full-{{timestamp}}",
+      "image_family": "reddit-full",
+      "ssh_username": "ubuntu",
+      "platform_id": "standard-v1",
+      "use_ipv4_nat": true
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": ["sleep 30"]
+    },
+    {
+      "type": "shell",
+      "script": "./scripts/bake_app.sh",
+      "execute_command": "sudo {{.Path}}"
+    },
+    {
+      "type": "file",
+      "source": "./files/redditapp.service",
+      "destination": "/tmp/redditapp.service"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo mv /tmp/redditapp.service /lib/systemd/system/redditapp.service",
+        "sudo chmod 644 /lib/systemd/system/redditapp.service",
+        "sudo systemctl daemon-reload",
+        "sudo systemctl enable redditapp.service"
+      ]
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "manifest",
+      "output": "immutable-manifest.json",
+      "strip_path": true,
+      "custom_data": {
+        "image_id": "{{ build `ImageID` }}",
+        "image_name": "{{ build `ImageName` }}"
+      }
+    }
+  ]
+}
