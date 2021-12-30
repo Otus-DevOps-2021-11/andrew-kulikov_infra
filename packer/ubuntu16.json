@@ -27,16 +27,5 @@
       "script": "./scripts/install_mongodb.sh",
       "execute_command": "sudo {{.Path}}"
     }
-  ],
-  "post-processors": [
-    {
-      "type": "manifest",
-      "output": "manifest.json",
-      "strip_path": true,
-      "custom_data": {
-        "image_id": "{{ build `ImageID` }}",
-        "image_name": "{{ build `ImageName` }}"
-      }
-    }
   ]
 }
