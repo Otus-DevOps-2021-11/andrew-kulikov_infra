@@ -1,9 +1,8 @@
-
 ## Homework 4
 
 ### Самостоятельное задание
 
-1. Скрипт по установке ruby: [install_ruby.sh](install_ruby.sh)
+1. Скрипт по установке ruby: [install_ruby.sh](../../config-scripts/install_ruby.sh)
 
 ```bash
 #!/bin/bash
@@ -13,7 +12,7 @@ sudo apt-get -y install ruby-full ruby-bundler build-essential
 ruby -v
 bundler -v
 ```
-2. Скрипт по установке mongodb: [install_mongodb.sh](install_ruby.sh)
+2. Скрипт по установке mongodb: [install_mongodb.sh](../../config-scripts/install_mongodb.sh)
 
 ```bash
 #!/bin/bash
@@ -26,7 +25,7 @@ sudo systemctl enable mongod
 sudo systemctl status mongod
 ```
 
-3. Скрипт по деплою приложения: [deploy.sh](install_ruby.sh)
+3. Скрипт по деплою приложения: [deploy.sh](../../config-scripts/deploy.sh)
 ```bash
 #!/bin/bash
 sudo apt-get -y install git
@@ -46,7 +45,7 @@ ps aux | grep puma
 * При использовании user-data нельзя передавать параметр ssh-key-file. Публичный нужно копировать в конфиг
 * Слетает дефолтная конфигурация yc-user, ее также необходимо прописывать
 
-<b>Команда создания инстанса</b> : [create_instance.sh](create_instance.sh)
+<b>Команда создания инстанса</b> : [create_instance.sh](../../config-scripts/create_instance.sh)
 
 ```bash
 yc compute instance create \
@@ -59,7 +58,7 @@ yc compute instance create \
   --metadata serial-port-enable=1
 ```
 
-<b>Файл конфигурации метаданных</b> : [cloud-config.yaml](cloud-config.yaml)
+<b>Файл конфигурации метаданных</b> : [cloud-config.yaml](../../config-scripts/cloud-config.yaml)
 
 ```yaml
 #cloud-config
