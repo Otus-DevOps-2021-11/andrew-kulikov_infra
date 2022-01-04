@@ -1,104 +1,30 @@
 # andrew-kulikov_infra
 andrew-kulikov Infra repository
 
-## Homework 4
+## Homework 5
 
 ### Самостоятельное задание
 
-1. Скрипт по установке ruby: [install_ruby.sh](install_ruby.sh)
-
-```bash
-#!/bin/bash
-sudo apt-get -y update
-sudo apt-get -y upgrade
-sudo apt-get -y install ruby-full ruby-bundler build-essential
-ruby -v
-bundler -v
-```
-2. Скрипт по установке mongodb: [install_mongodb.sh](install_ruby.sh)
-
-```bash
-#!/bin/bash
-wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -
-echo "deb [arch=amd64] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list
-sudo apt-get -y update
-sudo apt-get -y install mongodb-org
-sudo systemctl start mongod
-sudo systemctl enable mongod
-sudo systemctl status mongod
-```
-
-3. Скрипт по деплою приложения: [deploy.sh](install_ruby.sh)
-```bash
-#!/bin/bash
-sudo apt-get -y install git
-git clone -b monolith https://github.com/express42/reddit.git
-cd reddit
-bundle install
-puma -d
-ps aux | grep puma
-```
+Для подготовки базового образа был подготовлен конфигурационный файл [ubuntu16.json](packer/ubuntu16.json). Для установки приложений и пакетов использовались скрипты [install_ruby.sh](packer/scripts/install_ruby.sh) и [install_mongodb.sh](packer/scripts/install_mongodb.sh). Вначале столкнулся с ошикбой лока файла пакетного менеджера, помогло только ожидаение 30 секунд перед запуском provision стадии.
+Id базового образа можно найти с помощью команды `yc compute image --folder-id="standard-images" get-latest-from-family "ubuntu-1604-lts"`.
+Затем все переменные можем вынести в файл varibles.json. Пример заполнения: [variables.json.examples](packer/variables.json.examples).
+Также был использован постпроцессор, который выводит id созданного образа в файл manifest.json.
 
 ### Дополнительное задание
 
-С использованием источников https://cloud.yandex.ru/docs/compute/concepts/vm-metadata и https://cloudinit.readthedocs.io/en/latest/topics/examples.html был создан файл с метанаднными пользователя. В секции runcmd были прописаны все шаги из скриптов описанных выше. В результате при старте инстанса были установлены все необходимые пакеты и было запущено приложение.
+<b> Построение bake-образа </b>
 
-Из того, что не понравилось:
-* Нельзя указать несколько файлов скриптов, все нужно было копировать в секцию runcmd
-* При использовании user-data нельзя передавать параметр ssh-key-file. Публичный нужно копировать в конфиг
-* Слетает дефолтная конфигурация yc-user, ее также необходимо прописывать
-
-<b>Команда создания инстанса</b> : [create_instance.sh](create_instance.sh)
-
+Для подготовки bake-образа был подготовлен конфигурационный файл [immutable.json](packer/immutable.json). Данный образ построен на базовом образе reddit-base из прошлого задания и дополняет его установкой git, и исходников и зависимостей приложения [bake_app.sh](packer/scripts/bake_app.sh). Затем был использован механизм systemd unit для того, чтобы приложение запускалось автоматически после старта инстанса. Алгоритм следующий:
+1. Готовим unit file - [redditapp.service](packer/files/redditapp.service)
+2. Копируем его с помощью file target в папку /tmp (не поддерживает загрузку файла в папку, для которой нужны права)
+3. Переносим в /lib/systemd - `sudo mv /tmp/redditapp.service /system/redditapp.service`
+4. Делаем автозагрузку для нашего сервиса
 ```bash
-yc compute instance create \
-  --name reddit-app \
-  --hostname reddit-app \
-  --memory=4 \
-  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1604-lts,size=10GB \
-  --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
-  --metadata-from-file user-data=cloud-config.yaml \
-  --metadata serial-port-enable=1
+sudo chmod 644 /lib/systemd/system/redditapp.service
+sudo systemctl daemon-reload
+sudo systemctl enable redditapp.service
 ```
 
-<b>Файл конфигурации метаданных</b> : [cloud-config.yaml](cloud-config.yaml)
+<b> Автоматизация создания ВМ </b>
 
-```yaml
-#cloud-config
-
-package_update: true
-package_upgrade: true
-
-users:
-  - name: yc-user
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: sudo
-    shell: /bin/bash
-    lock_passwd: true
-    ssh_authorized_keys:
-      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCx59gwu7lqMcbf70vq6zmWsed1z35dzs66UXCuYZgboibIRH4Qlp1l+swMHpMN0HBzXWVOVbwm0wnALBD9fL7ZDp4WjFW20VQq19wwqAm/nytgcEX9EQCDWgl1aVuVxMoCIw9N18gBBE2q4t+ibtdvbeGJynPyLfZYZvzs72+Yc+9Gvfx7xCTcInS7LzWTU7mxbBU0pYI8PgSAQf7ydRrOzmbWDvbreVQifxhxk7MjElBHQkYyB06KX06x7O3VuX9XpJhUYqpxKQtdpv/M5jYKR71VZ02jIQbF13cVsZOJnZnJ9JnFr2HqMjOQp86MJPP4uLcY8O1bKp5ppymqRUTz appuser
-
-runcmd:
-  - apt-get -y install ruby-full ruby-bundler build-essential
-  - ruby -v
-  - bundler -v
-  - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 4B7C549A058F8B6B
-  - 'echo "deb [arch=amd64] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list'
-  - sudo apt-get -y update
-  - sudo apt-get -y install mongodb-org
-  - systemctl start mongod
-  - systemctl enable mongod
-  - systemctl status mongod
-  - apt-get -y install git
-  - git clone -b monolith https://github.com/express42/reddit.git
-  - cd reddit
-  - bundle install
-  - puma -d
-  - 'ps aux | grep puma'
-
-final_message: "The system is finally up, after $UPTIME seconds"
-```
-
-
-testapp_IP = 51.250.5.58
-testapp_port = 9292
+Для создания ВМ был сделан скрипт [create-reddit-vm](config-scripts/create-reddit-vm.sh). В качестве базового образа используется полученный образ семейства reddit-full с айди, записанным в immutable-manifest.json.
