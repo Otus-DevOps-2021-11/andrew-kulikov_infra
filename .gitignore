@@ -3,3 +3,9 @@ packer/manifest.json
 
 packer/immutable-variables.json
 packer/immutable-manifest.json
+
+*.tfstate
+*.tfstate.*.backup
+*.tfstate.backup
+*.tfvars
+.terraform/
