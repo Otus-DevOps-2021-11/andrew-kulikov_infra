@@ -24,8 +24,12 @@ variable private_key_path {
   description = "Path to the private key used for provisioner connection"
 }
 
-variable image_id {
-  description = "Disk image"
+variable app_image_id {
+  description = "Application vm disk image"
+}
+
+variable db_image_id {
+  description = "Database vm disk image"
 }
 
 variable subnet_id {
