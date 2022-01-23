@@ -1,30 +1,155 @@
 # andrew-kulikov_infra
 andrew-kulikov Infra repository
 
-## Homework 5
-
-### Самостоятельное задание
-
-Для подготовки базового образа был подготовлен конфигурационный файл [ubuntu16.json](packer/ubuntu16.json). Для установки приложений и пакетов использовались скрипты [install_ruby.sh](packer/scripts/install_ruby.sh) и [install_mongodb.sh](packer/scripts/install_mongodb.sh). Вначале столкнулся с ошикбой лока файла пакетного менеджера, помогло только ожидаение 30 секунд перед запуском provision стадии.
-Id базового образа можно найти с помощью команды `yc compute image --folder-id="standard-images" get-latest-from-family "ubuntu-1604-lts"`.
-Затем все переменные можем вынести в файл varibles.json. Пример заполнения: [variables.json.examples](packer/variables.json.examples).
-Также был использован постпроцессор, который выводит id созданного образа в файл manifest.json.
+## Homework 6
 
 ### Дополнительное задание
 
-<b> Построение bake-образа </b>
+### Подход с двумя копиями
 
-Для подготовки bake-образа был подготовлен конфигурационный файл [immutable.json](packer/immutable.json). Данный образ построен на базовом образе reddit-base из прошлого задания и дополняет его установкой git, и исходников и зависимостей приложения [bake_app.sh](packer/scripts/bake_app.sh). Затем был использован механизм systemd unit для того, чтобы приложение запускалось автоматически после старта инстанса. Алгоритм следующий:
-1. Готовим unit file - [redditapp.service](packer/files/redditapp.service)
-2. Копируем его с помощью file target в папку /tmp (не поддерживает загрузку файла в папку, для которой нужны права)
-3. Переносим в /lib/systemd - `sudo mv /tmp/redditapp.service /system/redditapp.service`
-4. Делаем автозагрузку для нашего сервиса
-```bash
-sudo chmod 644 /lib/systemd/system/redditapp.service
-sudo systemctl daemon-reload
-sudo systemctl enable redditapp.service
+Минусы:
+* Больше кода
+* Нужно везеде прописывать имена руками
+* При копировании можно ошибиться
+* Нужно поддерживать в одиноковом состоянии конфиги всех скопированных ресурсов (при копировании забыл поменять имя в provisioner connection, и второй раз полезло на первую машину)
+* Плохо масштабируется
+* Ресурсы создаются последовательно, а не параллельно
+
+Пример конфигурации 2 ресурсов для 2 инстансов:
+
+```terraform
+resource "yandex_compute_instance" "app" {
+  name = "reddit-app"
+
+  resources {
+    cores  = 2
+    memory = 2
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = var.image_id
+    }
+  }
+
+  network_interface {
+    subnet_id = var.subnet_id
+    nat       = true
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file(var.public_key_path)}"
+  }
+
+  connection {
+    type        = "ssh"
+    host        = yandex_compute_instance.app.network_interface.0.nat_ip_address
+    user        = "ubuntu"
+    agent       = false
+    private_key = file(var.private_key_path)
+  }
+
+  provisioner "file" {
+    source      = "files/puma.service"
+    destination = "/tmp/puma.service"
+  }
+
+  provisioner "remote-exec" {
+    script = "files/deploy.sh"
+  }
+}
+
+resource "yandex_compute_instance" "app2" {
+  name = "reddit-app-2"
+
+  resources {
+    cores  = 2
+    memory = 2
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = var.image_id
+    }
+  }
+
+  network_interface {
+    subnet_id = var.subnet_id
+    nat       = true
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file(var.public_key_path)}"
+  }
+
+  connection {
+    type        = "ssh"
+    host        = yandex_compute_instance.app2.network_interface.0.nat_ip_address
+    user        = "ubuntu"
+    agent       = false
+    private_key = file(var.private_key_path)
+  }
+
+  provisioner "file" {
+    source      = "files/puma.service"
+    destination = "/tmp/puma.service"
+  }
+
+  provisioner "remote-exec" {
+    script = "files/deploy.sh"
+  }
+}
 ```
 
-<b> Автоматизация создания ВМ </b>
+### Подход с count
 
-Для создания ВМ был сделан скрипт [create-reddit-vm](config-scripts/create-reddit-vm.sh). В качестве базового образа используется полученный образ семейства reddit-full с айди, записанным в immutable-manifest.json.
+Лишен недостатков, описанных в прошлом пункте. Также не нужно дублировать targets в конфигурации балансировщика.
+
+В connection вместо `yandex_compute_instance.app[count.index].network_interface.0.nat_ip_address` нужно использовать `self.network_interface.0.nat_ip_address`, иначе получаем `Error: Cycle: yandex_compute_instance.app[1], yandex_compute_instance.app[0]`
+
+Пример создания ресурса compute_instance с помощью count:
+
+```
+resource "yandex_compute_instance" "app" {
+  name = "reddit-app-${count.index}"
+
+  count = var.instance_count
+
+  resources {
+    cores  = 2
+    memory = 2
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = var.image_id
+    }
+  }
+
+  network_interface {
+    subnet_id = var.subnet_id
+    nat       = true
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file(var.public_key_path)}"
+  }
+
+  connection {
+    type        = "ssh"
+    host        = self.network_interface.0.nat_ip_address
+    user        = "ubuntu"
+    agent       = false
+    private_key = file(var.private_key_path)
+  }
+
+  provisioner "file" {
+    source      = "files/puma.service"
+    destination = "/tmp/puma.service"
+  }
+
+  provisioner "remote-exec" {
+    script = "files/deploy.sh"
+  }
+}
+```
