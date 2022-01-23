@@ -5,16 +5,22 @@ provider "yandex" {
   zone                     = var.zone
 }
 
+locals {
+  environment = "prod"
+}
+
 module "app" {
-  source          = "./modules/app"
+  source          = "../modules/app"
+  environment     = local.environment
   public_key_path = var.public_key_path
-  app_disk_image  = var.app_image_id
+  app_image_id    = var.app_image_id
   subnet_id       = var.subnet_id
 }
 
 module "db" {
-  source          = "./modules/db"
+  source          = "../modules/db"
+  environment     = local.environment
   public_key_path = var.public_key_path
-  db_disk_image   = var.db_image_id
+  db_image_id     = var.db_image_id
   subnet_id       = var.subnet_id
 }
