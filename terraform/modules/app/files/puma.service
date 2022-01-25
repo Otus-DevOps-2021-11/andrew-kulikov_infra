@@ -8,7 +8,7 @@ User=ubuntu
 WorkingDirectory=/home/ubuntu/reddit
 ExecStart=/bin/bash -lc 'puma'
 Restart=always
-Environment="DATABASE_URL=__MONGODB_URL__"
+EnvironmentFile=-/home/ubuntu/reddit.env
 
 [Install]
 WantedBy=multi-user.target

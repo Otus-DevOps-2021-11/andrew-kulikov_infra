@@ -61,10 +61,8 @@ Error: Error while requesting API to create instance: server-request-id = f43ddf
 1. Конфигурационные файлы и скрипты разнесены в папки files соответствующих модулей ([app](terraform/modules/app/files) и [db](terraform/modules/db/files))
 2. В каждый из модулей добавлена input variable `private_key_path` пути к приватному ключу для подключения provisioners
 3. На инстансе с базой выполняем следующие действия:
-  3.1. Копируем файл конфигурации [mongod.conf](terraform/modules/db/files/mongod.conf). Файл содержит специальную маску, которая должна быть заменена на ip созданного инстанса: `bindIp: 127.0.0.1,__INTERNAL_IPV4__`
-  3.2. С помощью скрипта [mongo_assign_ip.sh](terraform/modules/db/files/mongo_assign_ip.sh) заменяем маску на ip инстанса, который передается провижинеру в качестве аргумента. Подстановку делаем командой `sudo sed -i "s/__INTERNAL_IPV4__/$INTERNAL_IPV4/" /tmp/mongod.conf`
-  3.3. Заменяем файл конфигурации mongoDb на наш файл
-  3.4. Перезапускаем mongod
+  3.1. В mongod.conf указываем, что необходимо слушать любой ip-адрес: `sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/' /etc/mongod.conf`
+  3.2. Перезапускаем mongod `sudo systemctl restart mongod.service`
 4. Добавляем внутренний ip инстанса базы в output:
 ```terraform
 output "internal_ip_address_db" {
@@ -90,7 +88,7 @@ module "app" {
 }
 ```
 6. На инстансе с приложением выполняем следующие действия:
-  6.1. Для задания переменной среды в [puma.service](terraform/modules/app/files/puma.service) пользуемся аналогичным трюком - задаем маску для замены на адрес инстанса базы `Environment="DATABASE_URL=__MONGODB_URL__"`
-  6.2. В скрипт [deploy.sh](terraform/modules/app/files/deploy.sh) добавляем замену маски на адрес, переданный параметром в провижинер: `sudo sed -i "s/__MONGODB_URL__/$MONGODB_URL/" /tmp/puma.service`
+  6.1. Записываем адрес инстанса базы в reddit.env: `echo 'DATABASE_URL=${var.mongodb_internal_ip}' > ~/reddit.env`
+  6.1. Указываем файл переменных среды в [puma.service](terraform/modules/app/files/puma.service)
 
 В результате после применения `terraform apply` получаем рабочий инстанс приложения, подключенный к базе по внутреннему адресу.

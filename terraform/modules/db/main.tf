@@ -33,20 +33,10 @@ resource "yandex_compute_instance" "db" {
     private_key = file(var.private_key_path)
   }
 
-  provisioner "file" {
-    source      = "${path.module}/files/mongod.conf"
-    destination = "/tmp/mongod.conf"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/files/mongo_assign_ip.sh"
-    destination = "/tmp/mongo_assign_ip.sh"
-  }
-
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /tmp/mongo_assign_ip.sh",
-      "/tmp/mongo_assign_ip.sh ${self.network_interface.0.ip_address}",
+      "sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/' /etc/mongod.conf",
+      "sudo systemctl restart mongod.service"
     ]
   }
 }
