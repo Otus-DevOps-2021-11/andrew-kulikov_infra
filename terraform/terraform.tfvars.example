@@ -1,0 +1,7 @@
+service_account_key_file = "somekey.json"
+cloud_id                 = "cloud_id"
+folder_id                = "folder_id"
+zone                     = "ru-central1-a"
+bucket                   = "some-bucket"
+access_key               = "rVpQRYVgthaccess_keyOR0se1HuEb"
+secret_key               = "secret_key"
