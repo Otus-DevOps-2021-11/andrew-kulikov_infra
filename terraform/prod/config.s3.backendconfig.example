@@ -1,0 +1,4 @@
+bucket         = "terraform-state"
+access_key     = "--key_id--"
+secret_key     = "--key--"
+dynamodb_table = "terraform"
