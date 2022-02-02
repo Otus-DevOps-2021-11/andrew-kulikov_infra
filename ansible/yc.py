@@ -34,7 +34,7 @@ def get_parsed_terraform_outputs():
     return parse_terraform_outputs(output_lines)
 
 
-class ExampleInventory(object):
+class YCTerraformInventory(object):
 
     def __init__(self):
         self.inventory = {}
@@ -90,4 +90,4 @@ class ExampleInventory(object):
         self.args = parser.parse_args()
 
 
-ExampleInventory()
+YCTerraformInventory()
