@@ -36,16 +36,19 @@ resource "yandex_compute_instance" "app" {
   provisioner "file" {
     source      = "${path.module}/files/puma.service"
     destination = "/tmp/puma.service"
+    on_failure  = continue
   }
 
   provisioner "remote-exec" {
     inline = [
       "echo 'DATABASE_URL=${var.mongodb_internal_ip}' > ~/reddit.env"
     ]
+    on_failure  = continue
   }
 
   provisioner "remote-exec" {
     script      = "${path.module}/files/deploy.sh"
+    on_failure  = continue
   }
 
 }
