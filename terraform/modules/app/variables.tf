@@ -18,6 +18,6 @@ variable subnet_id {
   description = "Subnet"
 }
 
-variable mongodb_internal_ip {
-  description = "Internal ip of mongodb instance"
-}
+# variable mongodb_internal_ip {
+#   description = "Internal ip of mongodb instance"
+# }
