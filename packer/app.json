@@ -14,18 +14,9 @@
   ],
   "provisioners": [
     {
-      "type": "shell",
-      "inline": ["sleep 30"]
-    },
-    {
-      "type": "shell",
-      "script": "./scripts/install_ruby.sh",
-      "execute_command": "sudo {{.Path}}"
-    },
-    {
-      "type": "shell",
-      "script": "./scripts/install_git.sh",
-      "execute_command": "sudo {{.Path}}"
+      "type": "ansible",
+      "user": "ubuntu",
+      "playbook_file": "../ansible/packer_app.yml"
     }
   ]
 }

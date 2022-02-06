@@ -1,12 +1,18 @@
+# Packer
 packer/variables.json
 packer/manifest.json
 
 packer/immutable-variables.json
 packer/immutable-manifest.json
 
+# Terraform
 *.tfstate
 *.tfstate.*.backup
 *.tfstate.backup
 *.tfvars
 .terraform/
 *.backendconfig
+
+# Ansible
+*.retry
+*.pyc
