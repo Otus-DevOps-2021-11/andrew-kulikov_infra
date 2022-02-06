@@ -30,7 +30,7 @@ retry_files_enabled = False
 enable_plugins = yc_compute
 ```
 
-4. Создаем файл inventory [yc_compute.yml](ansible/plugins/yc_compute.yml). Там указываем наш плагин, а также folder_id и путь к ключу сервисного аккаунта. Задаем группы app и db по тегам, которые задавали в конфигурации terraform.
+4. Создаем файл inventory [yc_compute.yml](ansible/plugins/yc_compute.yml.example). Там указываем наш плагин, а также folder_id и путь к ключу сервисного аккаунта. Задаем группы app и db по тегам, которые задавали в конфигурации terraform.
 ```yaml
 plugin: yc_compute
 folders:
