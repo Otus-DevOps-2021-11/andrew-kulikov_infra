@@ -1,16 +1,13 @@
 plugin: yc_compute
-folders:  # List inventory hosts from these folders.
+folders:
   - b1gtckbo97fa9l1lqac7
 filters:
   - status == 'RUNNING'
 auth_kind: serviceaccountfile
 service_account_file: /mnt/c/Users/User-PC/yandexcloud/key.json
 hostnames:
-  #- fqdn  # Use FQDN for inventory hostnames.
   - "{{name}}_{{id}}"
 compose:
-  # Set ansible_host to the Public IP address to connect to the host.
-  # For Private IP use "network_interfaces[0].primary_v4_address.address".
   ansible_host: network_interfaces[0].primary_v4_address.one_to_one_nat.address
 groups:
   app: labels['tags'] == 'reddit-app'
