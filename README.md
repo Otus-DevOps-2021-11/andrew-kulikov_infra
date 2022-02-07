@@ -1,126 +1,59 @@
 # andrew-kulikov_infra
 andrew-kulikov Infra repository
 
-## Homework 8
+## Homework 9
 
-### Самостоятельное задание
+### Самостоятельное задание. Packer provisioning with ansible
 
+Для замены исходных скриптов были созданы плейбуки ansible, выполняющие аналогичные дествия с помощью специализированных модулей. Были использованы следующие модули: `apt`, `apt_key`, `apt_repository`, `service`.
 
-Пояснение к повторному выполнению плейбука с git clole:
+В результате получаем следующие плейбуки: [packer_app.yml](ansible/packer_app.yml) и [packer_db.yml](ansible/packer_db.yml)
 
-После выполнения `ansible app -m command -a 'rm -rf ~/reddit'` при попытке повторного выполнения `ansible-playbook clone.yml` получаем результат `appserver                  : ok=2    changed=1`. Это связано с тем, что теперь папки нет, и модуль отработал успешно. О чем и свидетельствует `changed=1`. Это значит, что модуль git написан верно и идемпотентен. То есть при повторном запуске будет произведена проверка на наличие директории. И команда будет выполнена только в случае ее отсутствия.
+### Дополнительное задание
 
+Плагин был взят из ветки yc_compute. Исходный код плагина можно найти здесь: https://github.com/st8f/community.general/blob/yc_compute/plugins/inventory/yc_compute.py
 
-### Дополнительное задание. Динамический inventory
+Для работы с динамическим inventory через плагин выполняем следующие шаги:
 
-Как было выяснено из статей, динамический inventory - любой исполняемый файл, который в stdout возвращает валидный inventory в формате json.
-Для получения адресов интансов было решено использовать terraform output. Для этого был реализован [скрипт](ansible/yc.py) на python3, запускающий команду `terraform output` в папке, из которой мы поднимали инфраструктуру с помощью terraform. Путь к папке берется из переменной среды `REDDITAPP_TERRAFORM_FOLDER`.
+1. В requirements.txt указываем зависимость `yandexcloud==0.10.1` (как указано в документации плагина).
+2. Задаем переменную среды `export ANSIBLE_INVENTORY_PLUGINS={path_to_plugin_dir}`, где path_to_plugin_dir - путь к папке, в которую скачали исходники плагина (в нашем случае ansbile/plugins).
+3. Указываем наш плагин в ansible.cfg
+```
+[defaults]
+inventory = ./yc_compute.yml
+remote_user = ubuntu
+private_key_file = ~/.ssh/appuser
+host_key_checking = False
+retry_files_enabled = False
 
-Код парсинга terraform output:
-```python
-ENV_TERRAFORM_FOLDER = 'REDDITAPP_TERRAFORM_FOLDER'
-APP_IP_OUTPUT_KEY = 'external_ip_address_app'
-DB_IP_OUTPUT_KEY = 'external_ip_address_db'
-
-
-def get_terraform_outputs(folder_path):
-    with subprocess.Popen(['terraform', 'output'], cwd=folder_path, stdout=subprocess.PIPE) as process:
-        return process.communicate()[0].decode('utf-8')
-
-
-def parse_terraform_outputs(terraform_output_lines):
-    return dict(map(parse_terraform_output_line, terraform_output_lines))
-
-
-def parse_terraform_output_line(line):
-    (name, value) = line.split(' = ')
-    return (name, value)
-
-
-def get_parsed_terraform_outputs():
-    terraform_path = os.environ.get(ENV_TERRAFORM_FOLDER)
-
-    output = get_terraform_outputs(terraform_path)
-    output_lines = output.splitlines()
-
-    return parse_terraform_outputs(output_lines)
+[inventory]
+enable_plugins = yc_compute
 ```
 
-Код построения динамического inventory:
-```python
-class YCTerraformInventory(object):
-
-    def __init__(self):
-        self.inventory = {}
-        self.read_cli_args()
-
-        # Called with `--list`.
-        if self.args.list:
-            self.inventory = self.yandex_terraform_inventory()
-        # Called with `--host [hostname]`.
-        elif self.args.host:
-            # Not implemented, since we return _meta info `--list`.
-            self.inventory = self.empty_inventory()
-        # If no groups or vars are present, return an empty inventory.
-        else:
-            self.inventory = self.empty_inventory()
-
-        print(json.dumps(self.inventory))
-
-    def yandex_terraform_inventory(self):
-        terraform_outputs = get_parsed_terraform_outputs()
-
-        app_instance_ip = terraform_outputs[APP_IP_OUTPUT_KEY]
-        db_instance_ip = terraform_outputs[DB_IP_OUTPUT_KEY]
-
-        return {
-            'app': {
-                'hosts': ['appserver']
-            },
-            'db': {
-                'hosts': ['dbserver']
-            },
-            '_meta': {
-                'hostvars': {
-                    'appserver': {
-                        'ansible_host': app_instance_ip
-                    },
-                    'dbserver': {
-                        'ansible_host': db_instance_ip
-                    }
-                }
-            }
-        }
-
-    # Empty inventory for testing.
-    def empty_inventory(self):
-        return {'_meta': {'hostvars': {}}}
-
-    # Read the command line args passed to the script.
-    def read_cli_args(self):
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--list', action='store_true')
-        parser.add_argument('--host', action='store')
-        self.args = parser.parse_args()
-
-
-YCTerraformInventory()
+4. Создаем файл inventory [yc_compute.yml](ansible/plugins/yc_compute.yml.example). Там указываем наш плагин, а также folder_id и путь к ключу сервисного аккаунта. Задаем группы app и db по тегам, которые задавали в конфигурации terraform.
+```yaml
+plugin: yc_compute
+folders:
+  - folder_id
+filters:
+  - status == 'RUNNING'
+auth_kind: serviceaccountfile
+service_account_file: key.json
+hostnames:
+  - "{{name}}_{{id}}"
+compose:
+  ansible_host: network_interfaces[0].primary_v4_address.one_to_one_nat.address
+groups:
+  app: labels['tags'] == 'reddit-app'
+  db: labels['tags'] == 'reddit-db'
 ```
 
-Затем в ansible.cfg меняем путь до inventory файла на наш скрипт `inventory = ./yc.py`, предварительно дав ему права на исполнение `chmod 777 ./yc.py`. В результате выполнения `ansible all -m ping` получаем успешный результат:
-```
-appserver | SUCCESS => {
-    "ansible_facts": {
-        "discovered_interpreter_python": "/usr/bin/python3"
-    },
-    "changed": false,
-    "ping": "pong"
-}
-dbserver | SUCCESS => {
-    "ansible_facts": {
-        "discovered_interpreter_python": "/usr/bin/python3"
-    },
-    "changed": false,
-    "ping": "pong"
-}
+5. Проверяем работоспособность с помощью `ansible-inventory --list -i yc_compute.yml`
+
+P.S. Можно было использовать и keyed groups, но теги называются reddit-app и reddit-db. А в скриптах уже везде прописаны app и db, поэтому использовал обычные groups. С keyed_grops выглядело бы так:
+```yaml
+keyed_groups:
+  - key: labels['tags']
+    prefix: ''
+    separator: ''
 ```

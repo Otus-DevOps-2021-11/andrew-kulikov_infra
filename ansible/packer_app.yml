@@ -1,0 +1,22 @@
+---
+- name: Install ruby, bundler and git
+  hosts: all
+  become: true
+  tasks:
+    - name: Update packages
+      apt:
+        update_cache: yes
+        update_cache_retries: 5
+        update_cache_retry_max_delay: 12
+
+    - name: Upgrade packages
+      apt:
+        upgrade: yes
+
+    - name: Install packages
+      apt:
+        pkg:
+          - ruby-full
+          - ruby-bundler
+          - build-essential
+          - git

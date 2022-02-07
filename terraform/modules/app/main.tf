@@ -25,30 +25,30 @@ resource "yandex_compute_instance" "app" {
     ssh-keys = "ubuntu:${file(var.public_key_path)}"
   }
 
-  connection {
-    type        = "ssh"
-    host        = self.network_interface.0.nat_ip_address
-    user        = "ubuntu"
-    agent       = false
-    private_key = file(var.private_key_path)
-  }
+  # connection {
+  #   type        = "ssh"
+  #   host        = self.network_interface.0.nat_ip_address
+  #   user        = "ubuntu"
+  #   agent       = false
+  #   private_key = file(var.private_key_path)
+  # }
 
-  provisioner "file" {
-    source      = "${path.module}/files/puma.service"
-    destination = "/tmp/puma.service"
-    on_failure  = continue
-  }
+  # provisioner "file" {
+  #   source      = "${path.module}/files/puma.service"
+  #   destination = "/tmp/puma.service"
+  #   on_failure  = continue
+  # }
 
-  provisioner "remote-exec" {
-    inline = [
-      "echo 'DATABASE_URL=${var.mongodb_internal_ip}' > ~/reddit.env"
-    ]
-    on_failure  = continue
-  }
+  # provisioner "remote-exec" {
+  #   inline = [
+  #     "echo 'DATABASE_URL=${var.mongodb_internal_ip}' > ~/reddit.env"
+  #   ]
+  #   on_failure  = continue
+  # }
 
-  provisioner "remote-exec" {
-    script      = "${path.module}/files/deploy.sh"
-    on_failure  = continue
-  }
+  # provisioner "remote-exec" {
+  #   script      = "${path.module}/files/deploy.sh"
+  #   on_failure  = continue
+  # }
 
 }
