@@ -3,6 +3,7 @@ resource "yandex_compute_instance" "db" {
 
   labels = {
     tags = "reddit-db"
+    env  = var.environment
   }
 
   resources {

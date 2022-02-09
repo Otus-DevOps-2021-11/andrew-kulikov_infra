@@ -16,3 +16,4 @@ packer/immutable-manifest.json
 # Ansible
 *.retry
 *.pyc
+jdauphant.nginx
