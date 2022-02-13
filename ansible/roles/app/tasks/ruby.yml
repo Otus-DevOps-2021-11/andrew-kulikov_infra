@@ -3,8 +3,8 @@
   tags: ruby
   apt:
     update_cache: yes
-    update_cache_retries: 5
-    update_cache_retry_max_delay: 12
+    # update_cache_retries: 5
+    # update_cache_retry_max_delay: 12
 
 # - name: Upgrade packages
 #   tags: ruby
