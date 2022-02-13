@@ -1,6 +1,6 @@
 require 'yaml'
 
-current_dir    = File.dirname(File.expand_path(__FILE__))
+current_dir = File.dirname(File.expand_path(__FILE__))
 nginx_config = YAML.load_file("#{current_dir}/nginx_vagrant.yml")
 
 Vagrant.configure("2") do |config|

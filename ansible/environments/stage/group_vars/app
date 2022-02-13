@@ -1,4 +1,4 @@
-db_host: 84.201.153.142
+db_host: 51.250.31.214
 deploy_user: ubuntu
 
 nginx_sites:
