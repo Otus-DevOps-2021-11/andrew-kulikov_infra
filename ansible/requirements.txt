@@ -1,2 +1,6 @@
-ansible>=2.4
-yandexcloud==0.10.1
+ansible==2.8.3
+# yandexcloud==0.10.1
+molecule==2.22.0
+testinfra==3.0.6
+python-vagrant>=0.5.15
+sh==1.12.14

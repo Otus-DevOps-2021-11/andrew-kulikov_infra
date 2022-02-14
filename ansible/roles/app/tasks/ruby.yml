@@ -1,0 +1,21 @@
+---
+- name: Update packages
+  tags: ruby
+  apt:
+    update_cache: yes
+    # update_cache_retries: 5
+    # update_cache_retry_max_delay: 12
+
+# - name: Upgrade packages
+#   tags: ruby
+#   apt:
+#     upgrade: yes
+
+- name: Install packages
+  tags: ruby
+  apt:
+    pkg:
+      - ruby-full
+      - ruby-bundler
+      - build-essential
+      - git
